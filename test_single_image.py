@@ -6,7 +6,8 @@ from torchvision import transforms
 from PIL import Image
 from easydict import EasyDict as edict
 from model.classifier import Classifier  # noqa
-
+import requests
+from io import BytesIO
 def load_model(cfg_path, model_path, device):
     # Load configuration
     with open(cfg_path) as f:
@@ -26,7 +27,12 @@ def preprocess_image(image_path, cfg):
         transforms.ToTensor(),
         transforms.Normalize(mean=[cfg.pixel_mean / 255.0] * 3, std=[cfg.pixel_std / 255.0] * 3),
     ])
-    image = Image.open(image_path).convert("RGB")
+    if image_path.startswith('http://') or image_path.startswith('https://'):
+        # Download the image
+        response = requests.get(image_path)
+        image = Image.open(BytesIO(response.content)).convert("RGB")
+    else:
+        image = Image.open(image_path).convert("RGB")
     return transform(image).unsqueeze(0)  # Add batch dimensio
 
 def predict_single_image(cfg, model, image_tensor, device, headers):
